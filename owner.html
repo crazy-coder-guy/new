@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grelo Home Page</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+    /* General Styling */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+h2.text-center {
+    font-size: 2rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+/* General styling for product items */
+.product-item {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    overflow: hidden;
+    margin-bottom: 1rem; /* Spacing below each product item */
+}
+
+/* Hover effect for product items */
+.product-item:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Image container within product item */
+.product-item .image-container {
+    width: 100%;
+    height: 200px; /* Fixed height for consistent image size */
+    overflow: hidden;
+    border-radius: 8px 8px 0 0; /* Rounded corners on the top */
+    position: relative;
+}
+
+/* Ensure images fit the container */
+.product-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Cover the container without distortion */
+    display: block; /* Remove any extra space below the image */
+}
+
+/* Product details section */
+.product-item .details {
+    padding: 1rem; /* Add padding around product details */
+}
+
+/* Responsive design for product list */
+@media (min-width: 576px) {
+    .product-item {
+        width: 100%; /* Full width on small screens */
+    }
+}
+
+@media (min-width: 768px) {
+    .product-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem; /* Space between product items */
+    }
+
+    .product-item {
+        flex: 1 1 calc(50% - 1rem); /* Two items per row on medium screens */
+    }
+}
+
+@media (min-width: 992px) {
+    .product-item {
+        flex: 1 1 calc(33.333% - 1rem); /* Three items per row on large screens */
+    }
+}
+
+@media (min-width: 1200px) {
+    .product-item {
+        flex: 1 1 calc(25% - 1rem); /* Four items per row on extra-large screens */
+    }
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2 class="mt-5 text-center">Add Product</h2>
+        <form id="add-product-form" class="mt-4">
+            <div class="form-group">
+                <label for="productType">Product Type</label>
+                <select id="productType" class="form-control">
+                    <option value="vegetable">Vegetable</option>
+                    <option value="fruit">Fruit</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="productName">Product Name</label>
+                <input type="text" id="productName" class="form-control" placeholder="Enter product name">
+            </div>
+            <div class="form-group">
+                <label for="productPrice">Price ($)</label>
+                <input type="number" id="productPrice" class="form-control" placeholder="Enter product price" step="0.01">
+            </div>
+            <div class="form-group">
+                <label for="productQuantity">Quantity</label>
+                <div class="form-row">
+                    <div class="col">
+                        <input type="number" id="productQuantity" class="form-control" placeholder="Enter quantity" step="0.01">
+                    </div>
+                    <div class="col">
+                        <select id="quantityUnit" class="form-control">
+                            <option value="g">grams</option>
+                            <option value="kg">kilograms</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="productStore">Store</label>
+                <input type="text" id="productStore" class="form-control" placeholder="Enter store name">
+            </div>
+            <div class="form-group">
+                <label for="productImage">Product Image</label>
+                <input type="file" id="productImage" class="form-control-file">
+            </div>
+            <button type="submit" class="btn btn-primary">Add Product</button>
+            <div id="feedback" class="alert mt-3" role="alert"></div>
+        </form>
+
+        <h2 class="mt-5 text-center">Product List</h2>
+        <div id="productList" class="row product-list"></div>
+    </div>
+     <!-- Footer -->
+     <footer class="bg-light text-center text-lg-start mt-5">
+        <div class="text-center p-3 bg-dark text-white">
+            &copy; 2024 Grelo. All rights reserved.
+        </div>
+    </footer>
+       <!-- Firebase SDKs -->
+       <script type="module">
+        // Import necessary Firebase modules
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+        import { getDatabase, ref, set, push, remove, onValue, get } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+        import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-storage.js";
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyAKft0GluY81Wr7yCg23rk_d24iqSUAGzI",
+            authDomain: "farmer-s-app-6ba74.firebaseapp.com",
+            databaseURL: "https://farmer-s-app-6ba74-default-rtdb.firebaseio.com",
+            projectId: "farmer-s-app-6ba74",
+            storageBucket: "farmer-s-app-6ba74.appspot.com",
+            messagingSenderId: "304658952728",
+            appId: "1:304658952728:web:cfe48a70585fdb91d5c96d"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const storage = getStorage(app);
+        const auth = getAuth(app);
+
+        // Track authenticated user
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                const uid = user.uid;
+                const productsRef = ref(db, `users/${uid}/products`);
+                
+                // Fetch and display products for the logged-in user
+                onValue(productsRef, (snapshot) => {
+                    renderProducts(snapshot);
+                });
+
+                // Add product event listener for the logged-in user
+                document.getElementById('add-product-form').addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    await addProduct(uid);
+                });
+                
+                // Remove product function will be updated to use the user's UID
+                window.removeProduct = async (productId) => {
+                    await removeProduct(uid, productId);
+                };
+            } else {
+                // User is signed out, handle accordingly
+                console.log('User is signed out');
+            }
+        });
+
+        async function addProduct(uid) {
+            const productType = document.getElementById('productType').value;
+            const productName = document.getElementById('productName').value;
+            const productPrice = parseFloat(document.getElementById('productPrice').value);
+            const productQuantity = parseFloat(document.getElementById('productQuantity').value);
+            const quantityUnit = document.getElementById('quantityUnit').value;
+            const productStore = document.getElementById('productStore').value;
+            const productImage = document.getElementById('productImage').files[0];
+
+            const feedback = document.getElementById('feedback');
+
+            try {
+                let imageUrl = '';
+
+                if (productImage) {
+                    const imageRef = storageRef(storage, `product_images/${Date.now()}_${productImage.name}`);
+                    const snapshot = await uploadBytes(imageRef, productImage);
+                    imageUrl = await getDownloadURL(snapshot.ref);
+                }
+
+                const productsRef = ref(db, `users/${uid}/products`);
+                const newProductRef = push(productsRef);
+                
+                await set(newProductRef, {
+                    type: productType,
+                    name: productName,
+                    price: productPrice,
+                    quantity: productQuantity,
+                    unit: quantityUnit,
+                    store: productStore,
+                    imageUrl: imageUrl
+                });
+
+                feedback.textContent = 'Product added successfully!';
+                feedback.className = 'alert alert-success';
+                feedback.style.display = 'block';
+            } catch (error) {
+                feedback.textContent = 'Failed to add product. Please try again.';
+                feedback.className = 'alert alert-danger';
+                feedback.style.display = 'block';
+                console.error('Error adding product:', error);
+            }
+
+            // Hide feedback message after 3 seconds
+            setTimeout(() => {
+                feedback.style.display = 'none';
+            }, 3000);
+        }
+
+        function renderProducts(snapshot) {
+            const productList = document.getElementById('productList');
+            productList.innerHTML = ''; // Clear existing products
+            snapshot.forEach(childSnapshot => {
+                const product = childSnapshot.val();
+                const productId = childSnapshot.key;
+                const productDiv = document.createElement('div');
+                productDiv.className = 'col-md-3 col-sm-6 mb-4';
+                productDiv.innerHTML = `
+                    <div class="product-item">
+                        <div class="image-container">
+                            <img src="${product.imageUrl || 'https://via.placeholder.com/150'}" alt="${product.name}">
+                        </div>
+                        <div class="product-info">
+                            <h3>${product.name} (${product.type})</h3>
+                            <p class="price">Price: $${product.price.toFixed(2)}</p>
+                            <p>Quantity: ${product.quantity} ${product.unit}</p>
+                            <p>Store: ${product.store}</p>
+                            <button class="btn btn-danger" onclick="removeProduct('${productId}')">Remove</button>
+                        </div>
+                    </div>
+                `;
+                productList.appendChild(productDiv);
+            });
+        }
+
+        async function removeProduct(uid, productId) {
+            const productRef = ref(db, `users/${uid}/products/${productId}`);
+
+            try {
+                const productSnapshot = await get(productRef);
+                const product = productSnapshot.val();
+                
+                if (product.imageUrl) {
+                    const imageRef = storageRef(storage, product.imageUrl);
+                    await deleteObject(imageRef);
+                }
+
+                await remove(productRef);
+                console.log('Product removed successfully!');
+            } catch (error) {
+                console.error('Error removing product:', error);
+            }
+        }
+    </script>
+</body>
+</html>
