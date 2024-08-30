@@ -152,187 +152,150 @@ h2.text-center {
             &copy; 2024 Grelo. All rights reserved.
         </div>
     </footer>
-
-
-    <!-- Firebase SDKs -->
-    <script type="module">
+       <!-- Firebase SDKs -->
+       <script type="module">
         // Import necessary Firebase modules
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-import { getDatabase, ref, set, push, remove, onValue, get } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
-import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-storage.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+        import { getDatabase, ref, set, push, remove, onValue, get } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+        import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-storage.js";
 
-// Firebase configuration
-const firebaseConfig = {
-    apiKey: "AIzaSyAKft0GluY81Wr7yCg23rk_d24iqSUAGzI",
-    authDomain: "farmer-s-app-6ba74.firebaseapp.com",
-    databaseURL: "https://farmer-s-app-6ba74-default-rtdb.firebaseio.com",
-    projectId: "farmer-s-app-6ba74",
-    storageBucket: "farmer-s-app-6ba74.appspot.com",
-    messagingSenderId: "304658952728",
-    appId: "1:304658952728:web:cfe48a70585fdb91d5c96d"
-};
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyAKft0GluY81Wr7yCg23rk_d24iqSUAGzI",
+            authDomain: "farmer-s-app-6ba74.firebaseapp.com",
+            databaseURL: "https://farmer-s-app-6ba74-default-rtdb.firebaseio.com",
+            projectId: "farmer-s-app-6ba74",
+            storageBucket: "farmer-s-app-6ba74.appspot.com",
+            messagingSenderId: "304658952728",
+            appId: "1:304658952728:web:cfe48a70585fdb91d5c96d"
+        };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-const storage = getStorage(app);
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const storage = getStorage(app);
+        const auth = getAuth(app);
 
-// Render products from database snapshot
-function renderProducts(snapshot) {
-    const productList = document.getElementById('productList');
-    productList.innerHTML = ''; // Clear existing products
-    snapshot.forEach(childSnapshot => {
-        const product = childSnapshot.val();
-        const productId = childSnapshot.key;
-        const productDiv = document.createElement('div');
-        productDiv.className = 'product-item'; // Fixed class name to match CSS
-        productDiv.innerHTML = `
-            <div class="image-container">
-                <img src="${product.imageUrl || 'https://via.placeholder.com/150'}" alt="${product.name}">
-            </div>
-            <div class="product-info">
-                <h3>${product.name} (${product.type})</h3>
-                <p class="price">Price: $${product.price}</p>
-                <p>Quantity: ${product.quantity} ${product.unit}</p>
-                <p>Store: ${product.store}</p>
-                <button class="btn btn-danger" onclick="removeProduct('${productId}')">Remove</button>
-            </div>
-        `;
-        productList.appendChild(productDiv);
-    });
-}
+        // Track authenticated user
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                const uid = user.uid;
+                const productsRef = ref(db, `users/${uid}/products`);
+                
+                // Fetch and display products for the logged-in user
+                onValue(productsRef, (snapshot) => {
+                    renderProducts(snapshot);
+                });
 
-// Fetch and display products
-const productsRef = ref(db, 'products');
-onValue(productsRef, (snapshot) => {
-    renderProducts(snapshot);
-});
-
-// Add a new product
-document.getElementById('add-product-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const productType = document.getElementById('productType').value;
-    const productName = document.getElementById('productName').value;
-    const productPrice = parseFloat(document.getElementById('productPrice').value);
-    const productQuantity = parseFloat(document.getElementById('productQuantity').value);
-    const quantityUnit = document.getElementById('quantityUnit').value;
-    const productStore = document.getElementById('productStore').value;
-    const productImage = document.getElementById('productImage').files[0];
-
-    const feedback = document.getElementById('feedback');
-
-    try {
-        let imageUrl = '';
-
-        if (productImage) {
-            const imageRef = storageRef(storage, `product_images/${Date.now()}_${productImage.name}`);
-            await uploadBytes(imageRef, productImage);
-            imageUrl = await getDownloadURL(imageRef);
-        }
-
-        const newProductRef = push(ref(db, 'products'));
-        await set(newProductRef, {
-            type: productType,
-            name: productName,
-            price: productPrice,
-            quantity: productQuantity,
-            unit: quantityUnit,
-            store: productStore,
-            imageUrl: imageUrl, // Add image URL
-            timestamp: new Date().toISOString()
+                // Add product event listener for the logged-in user
+                document.getElementById('add-product-form').addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    await addProduct(uid);
+                });
+                
+                // Remove product function will be updated to use the user's UID
+                window.removeProduct = async (productId) => {
+                    await removeProduct(uid, productId);
+                };
+            } else {
+                // User is signed out, handle accordingly
+                console.log('User is signed out');
+            }
         });
 
-        feedback.textContent = 'Product added successfully!';
-        feedback.className = 'alert alert-success mt-3';
-        feedback.style.display = 'block';
+        async function addProduct(uid) {
+            const productType = document.getElementById('productType').value;
+            const productName = document.getElementById('productName').value;
+            const productPrice = parseFloat(document.getElementById('productPrice').value);
+            const productQuantity = parseFloat(document.getElementById('productQuantity').value);
+            const quantityUnit = document.getElementById('quantityUnit').value;
+            const productStore = document.getElementById('productStore').value;
+            const productImage = document.getElementById('productImage').files[0];
 
-        // Fade out the feedback message after 5 seconds
-        setTimeout(() => {
-            feedback.classList.add('fade-out');
+            const feedback = document.getElementById('feedback');
+
+            try {
+                let imageUrl = '';
+
+                if (productImage) {
+                    const imageRef = storageRef(storage, `product_images/${Date.now()}_${productImage.name}`);
+                    const snapshot = await uploadBytes(imageRef, productImage);
+                    imageUrl = await getDownloadURL(snapshot.ref);
+                }
+
+                const productsRef = ref(db, `users/${uid}/products`);
+                const newProductRef = push(productsRef);
+                
+                await set(newProductRef, {
+                    type: productType,
+                    name: productName,
+                    price: productPrice,
+                    quantity: productQuantity,
+                    unit: quantityUnit,
+                    store: productStore,
+                    imageUrl: imageUrl
+                });
+
+                feedback.textContent = 'Product added successfully!';
+                feedback.className = 'alert alert-success';
+                feedback.style.display = 'block';
+            } catch (error) {
+                feedback.textContent = 'Failed to add product. Please try again.';
+                feedback.className = 'alert alert-danger';
+                feedback.style.display = 'block';
+                console.error('Error adding product:', error);
+            }
+
+            // Hide feedback message after 3 seconds
             setTimeout(() => {
                 feedback.style.display = 'none';
-                feedback.classList.remove('fade-out');
-            }, 500); // Match the fade-out duration
-        }, 5000);
-
-        document.getElementById('add-product-form').reset();
-    } catch (error) {
-        console.error('Error adding product:', error);
-        feedback.textContent = `Error adding product: ${error.message}`;
-        feedback.className = 'alert alert-danger mt-3';
-        feedback.style.display = 'block';
-
-        // Fade out the feedback message after 5 seconds
-        setTimeout(() => {
-            feedback.classList.add('fade-out');
-            setTimeout(() => {
-                feedback.style.display = 'none';
-                feedback.classList.remove('fade-out');
-            }, 500); // Match the fade-out duration
-        }, 5000);
-    }
-});
-
-// Remove a product
-window.removeProduct = async (productId) => {
-    try {
-        // Get a reference to the product that needs to be deleted
-        const productRef = ref(db, `products/${productId}`);
-        
-        // Retrieve the product data to get the image URL
-        const productSnapshot = await get(productRef);
-        const productData = productSnapshot.val();
-
-        if (productData && productData.imageUrl) {
-            // Extract the image file name from the image URL
-            const imageUrl = productData.imageUrl;
-            const imagePath = imageUrl.split(`${storage.app.options.storageBucket}/o/`)[1].split('?')[0];
-            const decodedImagePath = decodeURIComponent(imagePath);
-
-            // Create a reference to the image in Firebase Storage
-            const imageRef = storageRef(storage, decodedImagePath);
-
-            // Delete the image from Firebase Storage
-            await deleteObject(imageRef);
-            console.log('Product image deleted from storage.');
+            }, 3000);
         }
 
-        // Remove the product data from Firebase Realtime Database
-        await remove(productRef);
+        function renderProducts(snapshot) {
+            const productList = document.getElementById('productList');
+            productList.innerHTML = ''; // Clear existing products
+            snapshot.forEach(childSnapshot => {
+                const product = childSnapshot.val();
+                const productId = childSnapshot.key;
+                const productDiv = document.createElement('div');
+                productDiv.className = 'col-md-3 col-sm-6 mb-4';
+                productDiv.innerHTML = `
+                    <div class="product-item">
+                        <div class="image-container">
+                            <img src="${product.imageUrl || 'https://via.placeholder.com/150'}" alt="${product.name}">
+                        </div>
+                        <div class="product-info">
+                            <h3>${product.name} (${product.type})</h3>
+                            <p class="price">Price: $${product.price.toFixed(2)}</p>
+                            <p>Quantity: ${product.quantity} ${product.unit}</p>
+                            <p>Store: ${product.store}</p>
+                            <button class="btn btn-danger" onclick="removeProduct('${productId}')">Remove</button>
+                        </div>
+                    </div>
+                `;
+                productList.appendChild(productDiv);
+            });
+        }
 
-        const feedback = document.getElementById('feedback');
-        feedback.textContent = 'Product removed successfully!';
-        feedback.className = 'alert alert-success mt-3';
-        feedback.style.display = 'block';
+        async function removeProduct(uid, productId) {
+            const productRef = ref(db, `users/${uid}/products/${productId}`);
 
-        // Fade out the feedback message after 5 seconds
-        setTimeout(() => {
-            feedback.classList.add('fade-out');
-            setTimeout(() => {
-                feedback.style.display = 'none';
-                feedback.classList.remove('fade-out');
-            }, 500); // Match the fade-out duration
-        }, 5000);
+            try {
+                const productSnapshot = await get(productRef);
+                const product = productSnapshot.val();
+                
+                if (product.imageUrl) {
+                    const imageRef = storageRef(storage, product.imageUrl);
+                    await deleteObject(imageRef);
+                }
 
-    } catch (error) {
-        console.error('Error removing product:', error);
-        const feedback = document.getElementById('feedback');
-        feedback.textContent = `Error removing product: ${error.message}`;
-        feedback.className = 'alert alert-danger mt-3';
-        feedback.style.display = 'block';
-
-        // Fade out the feedback message after 5 seconds
-        setTimeout(() => {
-            feedback.classList.add('fade-out');
-            setTimeout(() => {
-                feedback.style.display = 'none';
-                feedback.classList.remove('fade-out');
-            }, 500); // Match the fade-out duration
-        }, 5000);
-    }
-};
-
+                await remove(productRef);
+                console.log('Product removed successfully!');
+            } catch (error) {
+                console.error('Error removing product:', error);
+            }
+        }
     </script>
 </body>
 </html>
