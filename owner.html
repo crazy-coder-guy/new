@@ -90,6 +90,92 @@ h2.text-center {
     }
 }
 
+/* General Styles */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f8f9fa;
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+h2 {
+    color: #343a40;
+}
+
+/* Form Styles */
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-control, .form-control-file {
+    border: 1px solid #ced4da;
+    border-radius: 0.25rem;
+    padding: 0.375rem 0.75rem;
+    font-size: 1rem;
+}
+
+.form-control:focus {
+    border-color: #155724;
+    outline: none;
+    box-shadow: 0 0 0 0.2rem rgba(38, 143, 255, 0.25);
+}
+
+.form-control-file {
+    border: 1px solid #ced4da;
+    border-radius: 0.25rem;
+    padding: 0.375rem 0.75rem;
+}
+
+.btn-primary {
+    background-color: #155724;
+    border: none;
+    color: #fff;
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+    border-radius: 0.25rem;
+    cursor: pointer;
+}
+
+.btn-primary:hover {
+    background-color: #155724;
+}
+
+.alert {
+    display: none;
+}
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+    .form-row {
+        flex-direction: column;
+    }
+
+    .form-row .col {
+        margin-bottom: 1rem;
+    }
+
+    .form-row .col:last-child {
+        margin-bottom: 0;
+    }
+}
+
+@media (max-width: 576px) {
+    .container {
+        padding: 10px;
+    }
+
+    .btn-primary {
+        width: 100%;
+    }
+}
+
+
     </style>
 </head>
 <body>
@@ -137,8 +223,15 @@ h2.text-center {
             <div id="feedback" class="alert mt-3" role="alert"></div>
         </form>
 
-        <h2 class="mt-5 text-center">Product List</h2>
-        <div id="productList" class="row product-list"></div>
+        <h2 class="mt-5 text-center">Vegetables</h2>
+        <div id="vegetableList" class="row"></div>
+        
+        <h2 class="mt-5 text-center">Fruits</h2>
+        <div id="fruitList" class="row"></div>
+
+        <h2 class="mt-5 text-center">Herbs</h2>
+        <div id="herbsList" class="row"></div>
+
     </div>
      <!-- Footer -->
      <footer class="bg-light text-center text-lg-start mt-5">
@@ -154,142 +247,155 @@ h2.text-center {
         import { getDatabase, ref, set, push, remove, onValue, get } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
         import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-storage.js";
 
-        // Your web app's Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyAKft0GluY81Wr7yCg23rk_d24iqSUAGzI",
-            authDomain: "farmer-s-app-6ba74.firebaseapp.com",
-            databaseURL: "https://farmer-s-app-6ba74-default-rtdb.firebaseio.com",
-            projectId: "farmer-s-app-6ba74",
-            storageBucket: "farmer-s-app-6ba74.appspot.com",
-            messagingSenderId: "304658952728",
-            appId: "1:304658952728:web:cfe48a70585fdb91d5c96d"
-        };
+         // Your web app's Firebase configuration
+    const firebaseConfig = {
+        apiKey: "AIzaSyAKft0GluY81Wr7yCg23rk_d24iqSUAGzI",
+        authDomain: "farmer-s-app-6ba74.firebaseapp.com",
+        databaseURL: "https://farmer-s-app-6ba74-default-rtdb.firebaseio.com",
+        projectId: "farmer-s-app-6ba74",
+        storageBucket: "farmer-s-app-6ba74.appspot.com",
+        messagingSenderId: "304658952728",
+        appId: "1:304658952728:web:cfe48a70585fdb91d5c96d"
+    };
 
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
-        const storage = getStorage(app);
-        const auth = getAuth(app);
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const storage = getStorage(app);
+    const auth = getAuth(app);
 
-        // Track authenticated user
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                const uid = user.uid;
-                const productsRef = ref(db, `users/${uid}/products`);
-                
-                // Fetch and display products for the logged-in user
-                onValue(productsRef, (snapshot) => {
-                    renderProducts(snapshot);
-                });
+    // Track authenticated user
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            const uid = user.uid;
+            const productsRef = ref(db, `users/${uid}/products`);
+            
+            // Fetch and display products for the logged-in user
+            onValue(productsRef, (snapshot) => {
+                renderProducts(snapshot);
+            });
 
-                // Add product event listener for the logged-in user
-                document.getElementById('add-product-form').addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    await addProduct(uid);
-                });
-                
-                // Remove product function will be updated to use the user's UID
-                window.removeProduct = async (productId) => {
-                    await removeProduct(uid, productId);
-                };
-            } else {
-                // User is signed out, handle accordingly
-                console.log('User is signed out');
-            }
+            // Add product event listener for the logged-in user
+            document.getElementById('add-product-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                await addProduct(uid);
+            });
+            
+            // Remove product function will be updated to use the user's UID
+            window.removeProduct = async (productId) => {
+                await removeProduct(uid, productId);
+            };
+        } else {
+            // User is signed out, handle accordingly
+            console.log('User is signed out');
+        }
+    });
+
+    async function addProduct(uid) {
+    const productType = document.getElementById('productType').value;
+    const productName = document.getElementById('productName').value;
+    let productPrice = parseFloat(document.getElementById('productPrice').value);
+    const productQuantity = parseFloat(document.getElementById('productQuantity').value);
+    const quantityUnit = document.getElementById('quantityUnit').value;
+    const productStore = document.getElementById('productStore').value;
+    const productImage = document.getElementById('productImage').files[0];
+
+    const feedback = document.getElementById('feedback');
+
+    try {
+        let imageUrl = '';
+
+        if (productImage) {
+            const imageRef = storageRef(storage, `product_images/${Date.now()}_${productImage.name}`);
+            const snapshot = await uploadBytes(imageRef, productImage);
+            imageUrl = await getDownloadURL(snapshot.ref);
+        }
+
+        // Generate a fee of either 5 or 10 rupees
+        const fee = Math.floor(Math.random() * 2) * 5 + 5;
+        productPrice += fee; // Add fee to the product price
+
+        const productsRef = ref(db, `users/${uid}/products`);
+        const newProductRef = push(productsRef);
+        
+        await set(newProductRef, {
+            type: productType,
+            name: productName,
+            price: productPrice,
+            quantity: productQuantity,
+            unit: quantityUnit,
+            store: productStore,
+            imageUrl: imageUrl
         });
 
-        async function addProduct(uid) {
-            const productType = document.getElementById('productType').value;
-            const productName = document.getElementById('productName').value;
-            const productPrice = parseFloat(document.getElementById('productPrice').value);
-            const productQuantity = parseFloat(document.getElementById('productQuantity').value);
-            const quantityUnit = document.getElementById('quantityUnit').value;
-            const productStore = document.getElementById('productStore').value;
-            const productImage = document.getElementById('productImage').files[0];
+        feedback.textContent = `Product added successfully! An extra platform fee of ₹${fee} was added to the price.`;
+        feedback.className = 'alert alert-success';
+        feedback.style.display = 'block';
+    } catch (error) {
+        feedback.textContent = 'Failed to add product. Please try again.';
+        feedback.className = 'alert alert-danger';
+        feedback.style.display = 'block';
+        console.error('Error adding product:', error);
+    }
 
-            const feedback = document.getElementById('feedback');
+    // Hide feedback message after 3 seconds
+    setTimeout(() => {
+        feedback.style.display = 'none';
+    }, 3000);
+}
 
-            try {
-                let imageUrl = '';
-
-                if (productImage) {
-                    const imageRef = storageRef(storage, `product_images/${Date.now()}_${productImage.name}`);
-                    const snapshot = await uploadBytes(imageRef, productImage);
-                    imageUrl = await getDownloadURL(snapshot.ref);
-                }
-
-                const productsRef = ref(db, `users/${uid}/products`);
-                const newProductRef = push(productsRef);
-                
-                await set(newProductRef, {
-                    type: productType,
-                    name: productName,
-                    price: productPrice,
-                    quantity: productQuantity,
-                    unit: quantityUnit,
-                    store: productStore,
-                    imageUrl: imageUrl
-                });
-
-                feedback.textContent = 'Product added successfully!';
-                feedback.className = 'alert alert-success';
-                feedback.style.display = 'block';
-            } catch (error) {
-                feedback.textContent = 'Failed to add product. Please try again.';
-                feedback.className = 'alert alert-danger';
-                feedback.style.display = 'block';
-                console.error('Error adding product:', error);
-            }
-
-            // Hide feedback message after 3 seconds
-            setTimeout(() => {
-                feedback.style.display = 'none';
-            }, 3000);
-        }
 
         function renderProducts(snapshot) {
-            const productList = document.getElementById('productList');
-            productList.innerHTML = ''; // Clear existing products
-            snapshot.forEach(childSnapshot => {
-                const product = childSnapshot.val();
-                const productId = childSnapshot.key;
-                const productDiv = document.createElement('div');
-                productDiv.className = 'col-md-3 col-sm-6 mb-4';
-                productDiv.innerHTML = `
-                    <div class="product-item">
-                        <div class="image-container">
-                            <img src="${product.imageUrl || 'https://via.placeholder.com/150'}" alt="${product.name}">
-                        </div>
-                        <div class="product-info">
-                            <h3>${product.name} (${product.type})</h3>
-                            <p class="price">Price: $${product.price.toFixed(2)}</p>
-                            <p>Quantity: ${product.quantity} ${product.unit}</p>
-                            <p>Store: ${product.store}</p>
-                            <button class="btn btn-danger" onclick="removeProduct('${productId}')">Remove</button>
-                        </div>
+        const vegetableList = document.getElementById('vegetableList');
+        const fruitList = document.getElementById('fruitList');
+        vegetableList.innerHTML = ''; // Clear existing vegetables
+        fruitList.innerHTML = ''; // Clear existing fruits
+        
+        snapshot.forEach(childSnapshot => {
+            const product = childSnapshot.val();
+            const productId = childSnapshot.key;
+            const productDiv = document.createElement('div');
+            productDiv.className = 'col-md-6 col-sm-12 mb-4';
+            productDiv.innerHTML = `
+                <div class="product-item">
+                    <div class="image-container">
+                        <img src="${product.imageUrl || 'https://via.placeholder.com/150'}" alt="${product.name}">
                     </div>
-                `;
-                productList.appendChild(productDiv);
-            });
-        }
-
-        async function removeProduct(uid, productId) {
-            const productRef = ref(db, `users/${uid}/products/${productId}`);
-
-            try {
-                const productSnapshot = await get(productRef);
-                const product = productSnapshot.val();
-                
-                if (product.imageUrl) {
-                    const imageRef = storageRef(storage, product.imageUrl);
-                    await deleteObject(imageRef);
-                }
-
-                await remove(productRef);
-                console.log('Product removed successfully!');
-            } catch (error) {
-                console.error('Error removing product:', error);
+                    <div class="product-info">
+                        <h3>${product.name} (${product.type})</h3>
+                        <p class="price">Price: $${product.price.toFixed(2)}</p>
+                        <p>Quantity: ${product.quantity} ${product.unit}</p>
+                        <p>Store: ${product.store}</p>
+                        <button class="btn btn-danger" onclick="removeProduct('${productId}')">Remove</button>
+                    </div>
+                </div>
+            `;
+            
+            if (product.type === 'vegetable') {
+                vegetableList.appendChild(productDiv);
+            } else if (product.type === 'fruit') {
+                fruitList.appendChild(productDiv);
             }
+        });
+    }
+
+    async function removeProduct(uid, productId) {
+        const productRef = ref(db, `users/${uid}/products/${productId}`);
+
+        try {
+            const productSnapshot = await get(productRef);
+            const product = productSnapshot.val();
+            
+            if (product.imageUrl) {
+                const imageRef = storageRef(storage, product.imageUrl);
+                await deleteObject(imageRef);
+            }
+
+            await remove(productRef);
+            console.log('Product removed successfully!');
+        } catch (error) {
+            console.error('Error removing product:', error);
         }
+    }
     </script>
 </body>
 </html>
