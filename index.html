@@ -125,7 +125,7 @@
             email: email
           });
           console.log('Sign-up successful. Redirecting to main.html');
-          window.location.href = 'main.html'; // Redirect to the main page after sign up
+          window.location.href = 'owner.html'; // Redirect to the main page after sign up
         })
         .catch((error) => {
           showNotification("Error: " + error.message, 'error');
@@ -142,7 +142,7 @@
       signInWithEmailAndPassword(auth, email, password)
         .then(() => {
           console.log('Sign-in successful. Redirecting to main.html');
-          window.location.href = 'main.html'; // Redirect to the main page after sign in
+          window.location.href = 'owner.html'; // Redirect to the main page after sign in
         })
         .catch((error) => {
           showNotification("Error: " + error.message, 'error');
